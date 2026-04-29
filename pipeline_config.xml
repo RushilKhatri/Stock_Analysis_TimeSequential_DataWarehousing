@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    ============================================================
+    FILE        : pipeline_config.xml
+    PURPOSE     : Database connection, CSV source, ETL execution
+                  settings, and indicator parameters.
+                  Everything the ETL engine needs to run.
+    DYNAMIC     : YES — change DB host, CSV path,
+                  indicator parameters — no code changes.
+    ============================================================
+-->
+<pipeline_config>
+
+    <!-- ══════════════════════════════════════════════════════
+         CSV SOURCE
+         Describes the input data file.
+    ══════════════════════════════════════════════════════════ -->
+    <csv_source>
+        <file_path>data/stocks_ohlcv.csv</file_path>
+
+        <!-- Expected columns in the CSV — order matters -->
+        <columns>
+            <col name="timestamp"   type="datetime" format="%Y-%m-%d %H:%M:%S" required="true"/>
+            <col name="ticker"      type="string"                               required="true"/>
+            <col name="open"        type="float"                                required="true"/>
+            <col name="high"        type="float"                                required="true"/>
+            <col name="low"         type="float"                                required="true"/>
+            <col name="close"       type="float"                                required="true"/>
+            <col name="volume"      type="int"                                  required="true"/>
+            <col name="trade_count" type="int"                                  required="false"/>
+        </columns>
+
+        <!-- Sort order required for time-sequential processing -->
+        <sort_by>timestamp ASC, ticker ASC</sort_by>
+
+        <!-- Validation rules applied before ETL starts -->
+        <validation>
+            <rule check="no_nulls"       columns="timestamp,ticker,open,high,low,close,volume"/>
+            <rule check="timestamp_asc"  columns="timestamp" description="Must be monotonically increasing"/>
+            <rule check="high_gte_low"   description="high must be >= low in every row"/>
+            <rule check="positive_volume" description="Volume must be > 0"/>
+        </validation>
+    </csv_source>
+
+    <!-- ══════════════════════════════════════════════════════
+         STOCK MASTER (DIM_STOCK ENRICHMENT)
+    ══════════════════════════════════════════════════════════ -->
+    <stock_master>
+        <file_path>data/dim_stock_master.csv</file_path>
+    </stock_master>
+
+        <!-- ══════════════════════════════════════════════════════
+            DATABASE — MySQL (Star Schema)
+        ══════════════════════════════════════════════════════════ -->
+    <database engine="mysql">
+        <host>localhost</host>
+        <port>3306</port>
+        <dbname>stock_dw</dbname>
+        <user>root</user>
+        <!-- Password stored in environment variable — never hardcode -->
+        <password_env_var>STOCK_DW_PASSWORD</password_env_var>
+        <pool_size>5</pool_size>
+        <schema_file>schema_config.xml</schema_file>
+    </database>
+
+    <!-- ══════════════════════════════════════════════════════
+         INDICATOR PARAMETERS
+         Controls how technical indicators are computed.
+         These map to the indicator columns in schema_config.xml.
+    ══════════════════════════════════════════════════════════ -->
+    <indicators>
+
+        <indicator name="sma_20"
+                   type="SMA"
+                   column="close_price"
+                   lookback="20"
+                   min_periods="1"
+                   description="Simple moving average over 20 bars"/>
+
+        <indicator name="ema_9"
+                   type="EMA"
+                   column="close_price"
+                   span="9"
+                   adjust="false"
+                   description="Exponential moving average, span=9"/>
+
+        <indicator name="rsi_14"
+                   type="RSI"
+                   column="close_price"
+                   periods="14"
+                   overbought="70"
+                   oversold="30"
+                   description="Relative Strength Index over 14 bars"/>
+
+        <indicator name="vwap"
+                   type="VWAP"
+                   price_col="close_price"
+                   volume_col="volume"
+                   description="Cumulative volume-weighted average price"/>
+
+    </indicators>
+
+    <!-- ══════════════════════════════════════════════════════
+         ETL EXECUTION MODE
+         CSV -> compute -> MySQL.
+    ══════════════════════════════════════════════════════════ -->
+    <etl_execution>
+        <mode>DIRECT_LOAD</mode>
+        <target_table>fact_stock_bar</target_table>
+        <upsert_strategy>insert</upsert_strategy>
+    </etl_execution>
+
+    <!-- ══════════════════════════════════════════════════════
+         LATTICE MATERIALIZATION + FACT RETENTION
+    ══════════════════════════════════════════════════════════ -->
+    <lattice_materialization>
+        <auto_create_loc_tables>true</auto_create_loc_tables>
+        <loc_schema_sql_file>lattice_cuboid_tables_stock_hierarchy.sql</loc_schema_sql_file>
+        <materialize_loc_tables>true</materialize_loc_tables>
+        <prune_after_loc_update>true</prune_after_loc_update>
+        <fact_retention_keep_latest>30</fact_retention_keep_latest>
+    </lattice_materialization>
+
+    <!-- ══════════════════════════════════════════════════════
+         LOGGING
+    ══════════════════════════════════════════════════════════ -->
+    <logging>
+        <level>INFO</level>
+        <log_file>logs/pipeline.log</log_file>
+        <log_to_console>true</log_to_console>
+        <log_query_results>false</log_query_results>
+        <!-- Log a summary every N windows -->
+        <summary_every_n_windows>5</summary_every_n_windows>
+    </logging>
+
+</pipeline_config>

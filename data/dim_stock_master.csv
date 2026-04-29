@@ -1,0 +1,45 @@
+ticker,company_name,sector,industry,exchange,currency,market_cap_tier,index_membership
+AAPL,Apple Inc.,Technology,Consumer Electronics,NASDAQ,USD,LARGE,SP500|NASDAQ100|DJIA
+ABNB,Airbnb Inc.,Consumer Discretionary,Travel Services,NASDAQ,USD,LARGE,SP500|NASDAQ100
+ADBE,Adobe Inc.,Technology,Application Software,NASDAQ,USD,LARGE,SP500|NASDAQ100
+AMD,Advanced Micro Devices Inc.,Technology,Semiconductors,NASDAQ,USD,LARGE,SP500|NASDAQ100
+AMZN,Amazon.com Inc.,Consumer Discretionary,Internet Retail,NASDAQ,USD,LARGE,SP500|NASDAQ100
+BA,Boeing Co.,Industrials,Aerospace & Defense,NYSE,USD,LARGE,SP500|DJIA
+CAT,Caterpillar Inc.,Industrials,Farm & Heavy Construction Machinery,NYSE,USD,LARGE,SP500|DJIA
+COIN,Coinbase Global Inc.,Financials,Financial Exchanges & Data,NASDAQ,USD,LARGE,SP500
+CRM,Salesforce Inc.,Technology,Application Software,NYSE,USD,LARGE,SP500|DJIA
+CRWD,CrowdStrike Holdings Inc.,Technology,Systems Software,NASDAQ,USD,LARGE,SP500|NASDAQ100
+DASH,DoorDash Inc.,Consumer Discretionary,Restaurants,NASDAQ,USD,LARGE,SP500|NASDAQ100
+DDOG,Datadog Inc.,Technology,Systems Software,NASDAQ,USD,LARGE,SP500|NASDAQ100
+F,Ford Motor Co.,Consumer Discretionary,Automobile Manufacturers,NYSE,USD,LARGE,SP500
+GE,GE Aerospace,Industrials,Aerospace & Defense,NYSE,USD,LARGE,SP500
+GM,General Motors Co.,Consumer Discretionary,Automobile Manufacturers,NYSE,USD,LARGE,SP500
+GOOGL,Alphabet Inc.,Communication Services,Interactive Media & Services,NASDAQ,USD,LARGE,SP500|NASDAQ100
+INTC,Intel Corp.,Technology,Semiconductors,NASDAQ,USD,LARGE,SP500|NASDAQ100|DJIA
+LCID,Lucid Group Inc.,Consumer Discretionary,Automobile Manufacturers,NASDAQ,USD,MID,
+LYFT,Lyft Inc.,Industrials,Passenger Ground Transportation,NASDAQ,USD,MID,
+MDB,MongoDB Inc.,Technology,Application Software,NASDAQ,USD,LARGE,NASDAQ100
+META,Meta Platforms Inc.,Communication Services,Interactive Media & Services,NASDAQ,USD,LARGE,SP500|NASDAQ100
+MSFT,Microsoft Corp.,Technology,Systems Software,NASDAQ,USD,LARGE,SP500|NASDAQ100|DJIA
+NET,Cloudflare Inc.,Technology,Internet Services & Infrastructure,NYSE,USD,LARGE,
+NFLX,Netflix Inc.,Communication Services,Movies & Entertainment,NASDAQ,USD,LARGE,SP500|NASDAQ100
+NOW,ServiceNow Inc.,Technology,Systems Software,NYSE,USD,LARGE,SP500|NASDAQ100
+NVDA,NVIDIA Corp.,Technology,Semiconductors,NASDAQ,USD,LARGE,SP500|NASDAQ100
+ORCL,Oracle Corp.,Technology,Application Software,NYSE,USD,LARGE,SP500
+PATH,UiPath Inc.,Technology,Application Software,NYSE,USD,MID,
+PLTR,Palantir Technologies Inc.,Technology,Application Software,NASDAQ,USD,LARGE,SP500
+PYPL,PayPal Holdings Inc.,Financials,Transaction & Payment Processing Services,NASDAQ,USD,LARGE,SP500|NASDAQ100
+RBLX,Roblox Corp.,Communication Services,Interactive Home Entertainment,NASDAQ,USD,MID,
+RIVN,Rivian Automotive Inc.,Consumer Discretionary,Automobile Manufacturers,NASDAQ,USD,MID,
+ROKU,Roku Inc.,Communication Services,Interactive Home Entertainment,NASDAQ,USD,MID,
+SHOP,Shopify Inc.,Technology,Internet Services & Infrastructure,NYSE,USD,LARGE,
+SNAP,Snap Inc.,Communication Services,Interactive Media & Services,NYSE,USD,MID,
+SNOW,Snowflake Inc.,Technology,Application Software,NYSE,USD,LARGE,SP500
+SPOT,Spotify Technology SA,Communication Services,Interactive Media & Services,NYSE,USD,LARGE,
+SQ,Block Inc.,Financials,Transaction & Payment Processing Services,NYSE,USD,LARGE,SP500
+TSLA,Tesla Inc.,Consumer Discretionary,Automobile Manufacturers,NASDAQ,USD,LARGE,SP500|NASDAQ100
+TWTR,Twitter Inc.,Communication Services,Interactive Media & Services,NYSE,USD,MID,
+U,Unity Software Inc.,Technology,Application Software,NYSE,USD,MID,
+UBER,Uber Technologies Inc.,Industrials,Passenger Ground Transportation,NYSE,USD,LARGE,SP500
+ZOOM,Zoom Video Communications Inc.,Technology,Application Software,NASDAQ,USD,LARGE,NASDAQ100
+ZS,Zscaler Inc.,Technology,Systems Software,NASDAQ,USD,LARGE,NASDAQ100

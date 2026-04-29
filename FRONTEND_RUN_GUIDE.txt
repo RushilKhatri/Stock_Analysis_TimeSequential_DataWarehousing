@@ -1,0 +1,28 @@
+LOC FRONTEND (ONE PAGE) — RUN GUIDE
+===================================
+
+1) Activate virtual environment
+   source .venv/bin/activate
+
+2) Install Flask if missing
+   pip install flask
+
+3) Set DB password env var (same as ETL)
+   export STOCK_DW_PASSWORD=your_mysql_password
+
+4) Start frontend backend
+   # optional custom port:
+   # export FRONTEND_PORT=5050
+   python frontend_app.py
+
+5) Open browser
+   http://127.0.0.1:5050
+
+What you get:
+- Dropdown for 8 LOC tables
+- Dynamic extra dropdowns for table dimensions:
+  company_name / sector / industry (depends on table)
+- Line chart with:
+  volume_sum, volume_avg, sma_20_sum, sma_20_avg
+- X axis: time
+- Y axis: value

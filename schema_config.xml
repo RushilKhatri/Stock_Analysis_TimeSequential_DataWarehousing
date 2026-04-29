@@ -1,0 +1,597 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<warehouse_schema name="stock_dw" database="mysql">
+
+    <dimensions count="3">
+
+        <dimension name="dim_time" ordinal="1"
+                   description="Time hierarchy dimension — one row per 1-minute timestamp">
+            <columns>
+                <column name="time_key"
+                        type="BIGINT"
+                        category="key"
+                        key="PK"
+                        nullable="false"
+                        source="system"
+                        description="Surrogate key encoded as YYYYMMDDHHMI integer"/>
+
+                <column name="trade_date"
+                        type="DATE"
+                        category="attribute"
+                        key=""
+                        nullable="false"
+                        source="derived"
+                        description="Calendar date of the bar"/>
+
+                <column name="trade_time"
+                        type="TIME"
+                        category="attribute"
+                        key=""
+                        nullable="false"
+                        source="derived"
+                        description="Minute-level clock time HH:MM:00"/>
+
+                <column name="hour"
+                        type="SMALLINT"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="derived"
+                        hierarchy_level="2"
+                        description="Hour of day 0-23"/>
+
+                <column name="minute_of_day"
+                        type="SMALLINT"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="derived"
+                        hierarchy_level="1"
+                        description="Minutes elapsed since midnight 0-959"/>
+
+                <column name="trading_session"
+                        type="VARCHAR(10)"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="derived"
+                        hierarchy_level="3"
+                        allowed_values="PRE,OPEN,CLOSE,AFTER"
+                        description="Named trading session within the day"/>
+
+                <column name="day_of_week"
+                        type="VARCHAR(9)"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="derived"
+                        description="Full day name Monday through Friday"/>
+
+                <column name="week_of_year"
+                        type="SMALLINT"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="derived"
+                        hierarchy_level="4"
+                        description="ISO week number 1-53"/>
+
+                <column name="month"
+                        type="SMALLINT"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="derived"
+                        hierarchy_level="5"
+                        description="Calendar month 1-12"/>
+
+                <column name="quarter"
+                        type="SMALLINT"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="derived"
+                        hierarchy_level="6"
+                        description="Fiscal quarter 1-4"/>
+
+                <column name="year"
+                        type="SMALLINT"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="derived"
+                        hierarchy_level="7"
+                        description="Calendar year e.g. 2024"/>
+
+                <column name="is_market_open"
+                        type="TINYINT(1)"
+                        category="flag"
+                        key=""
+                        nullable="true"
+                        source="derived"
+                        default="false"
+                        description="TRUE if timestamp falls within 09:30-16:00 ET"/>
+
+                <column name="window_id"
+                        type="INT"
+                        category="fk"
+                        key="FK"
+                        nullable="true"
+                        source="engine"
+                        references="dim_window.window_id"
+                        description="Which sliding window this timestamp belongs to"/>
+            </columns>
+
+            <hierarchy name="time_lattice">
+                <level ordinal="1" column="minute_of_day"   label="Minute"/>
+                <level ordinal="2" column="hour"            label="Hour"/>
+                <level ordinal="3" column="trading_session" label="Session"/>
+                <level ordinal="4" column="trade_date"      label="Day"/>
+                <level ordinal="5" column="week_of_year"    label="Week"/>
+                <level ordinal="6" column="month"           label="Month"/>
+                <level ordinal="7" column="quarter"         label="Quarter"/>
+                <level ordinal="8" column="year"            label="Year"/>
+            </hierarchy>
+        </dimension>
+
+        <dimension name="dim_stock" ordinal="2"
+                   scd_type="2"
+                   description="Stock master dimension — SCD Type 2 for historical accuracy">
+            <columns>
+                <column name="stock_key"
+                        type="INT"
+                        category="key"
+                        key="PK"
+                        nullable="false"
+                        source="system"
+                        description="Auto-increment surrogate key"/>
+
+                <column name="ticker"
+                        type="VARCHAR(10)"
+                        category="attribute"
+                        key=""
+                        nullable="false"
+                        source="csv"
+                        hierarchy_level="1"
+                        description="Exchange ticker symbol e.g. AAPL"/>
+
+                <column name="company_name"
+                        type="VARCHAR(100)"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="reference"
+                        description="Full legal company name"/>
+
+                <column name="sector"
+                        type="VARCHAR(50)"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="reference"
+                        hierarchy_level="3"
+                        description="GICS sector classification e.g. Technology"/>
+
+                <column name="industry"
+                        type="VARCHAR(80)"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="reference"
+                        hierarchy_level="2"
+                        description="GICS industry sub-group e.g. Consumer Electronics"/>
+
+                <column name="exchange"
+                        type="VARCHAR(10)"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="reference"
+                        hierarchy_level="4"
+                        allowed_values="NASDAQ,NYSE,AMEX"
+                        description="Listing exchange"/>
+
+                <column name="currency"
+                        type="CHAR(3)"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="reference"
+                        default="USD"
+                        description="ISO 4217 currency code"/>
+
+                <column name="market_cap_tier"
+                        type="VARCHAR(10)"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="reference"
+                        allowed_values="LARGE,MID,SMALL,MICRO"
+                        description="Market capitalisation tier"/>
+
+                <column name="index_membership"
+                        type="VARCHAR(20)"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="reference"
+                        description="Comma-separated index flags e.g. SP500,NASDAQ100"/>
+
+                <!-- SCD Type 2 tracking columns -->
+                <column name="eff_from"
+                        type="DATE"
+                        category="scd"
+                        key=""
+                        nullable="false"
+                        source="system"
+                        description="SCD2: date this version of the record became active"/>
+
+                <column name="eff_to"
+                        type="DATE"
+                        category="scd"
+                        key=""
+                        nullable="true"
+                        source="system"
+                        description="SCD2: date this record expired — NULL means currently active"/>
+
+                <column name="is_current"
+                        type="TINYINT(1)"
+                        category="scd"
+                        key=""
+                        nullable="true"
+                        source="system"
+                        default="true"
+                        description="TRUE for the currently active row per ticker"/>
+            </columns>
+
+            <hierarchy name="stock_lattice">
+                <level ordinal="1" column="ticker"    label="Ticker"/>
+                <level ordinal="2" column="industry"  label="Industry"/>
+                <level ordinal="3" column="sector"    label="Sector"/>
+                <level ordinal="4" column="exchange"  label="Exchange"/>
+                <level ordinal="5" column="ALL"       label="All Stocks"/>
+            </hierarchy>
+
+            <!-- Seed data — pre-loaded tickers -->
+            <seed_data>
+                <stock ticker="AAPL" company="Apple Inc."       sector="Technology"             industry="Consumer Electronics" exchange="NASDAQ" currency="USD" market_cap_tier="LARGE" index_membership="SP500,NASDAQ100,DJIA"/>
+                <stock ticker="MSFT" company="Microsoft Corp."  sector="Technology"             industry="Systems Software"     exchange="NASDAQ" currency="USD" market_cap_tier="LARGE" index_membership="SP500,NASDAQ100,DJIA"/>
+                <stock ticker="GOOGL" company="Alphabet Inc."   sector="Communication Services" industry="Internet Content"     exchange="NASDAQ" currency="USD" market_cap_tier="LARGE" index_membership="SP500,NASDAQ100"/>
+                <stock ticker="AMZN" company="Amazon.com Inc."  sector="Consumer Discretionary" industry="Internet Retail"      exchange="NASDAQ" currency="USD" market_cap_tier="LARGE" index_membership="SP500,NASDAQ100"/>
+                <stock ticker="TSLA" company="Tesla Inc."       sector="Consumer Discretionary" industry="Auto Manufacturers"   exchange="NASDAQ" currency="USD" market_cap_tier="LARGE" index_membership="SP500,NASDAQ100"/>
+                <stock ticker="NVDA" company="NVIDIA Corp."     sector="Technology"             industry="Semiconductors"       exchange="NASDAQ" currency="USD" market_cap_tier="LARGE" index_membership="SP500,NASDAQ100"/>
+                <stock ticker="META" company="Meta Platforms"   sector="Communication Services" industry="Internet Content"     exchange="NASDAQ" currency="USD" market_cap_tier="LARGE" index_membership="SP500,NASDAQ100"/>
+                <stock ticker="NFLX" company="Netflix Inc."     sector="Communication Services" industry="Entertainment"        exchange="NASDAQ" currency="USD" market_cap_tier="LARGE" index_membership="SP500,NASDAQ100"/>
+            </seed_data>
+        </dimension>
+
+        <dimension name="dim_window" ordinal="3"
+                   description="Sliding window registry — one row per closed window">
+            <columns>
+                <column name="window_key"
+                        type="INT"
+                        category="key"
+                        key="PK"
+                        nullable="false"
+                        source="system"
+                        description="Auto-increment surrogate key"/>
+
+                <column name="window_id"
+                        type="INT"
+                        category="attribute"
+                        key=""
+                        nullable="false"
+                        source="engine"
+                        description="Monotonically increasing sequence number 1,2,3..."/>
+
+                <column name="window_start_ts"
+                        type="TIMESTAMP"
+                        category="attribute"
+                        key=""
+                        nullable="false"
+                        source="engine"
+                        description="Timestamp of the first bar included in this window"/>
+
+                <column name="window_end_ts"
+                        type="TIMESTAMP"
+                        category="attribute"
+                        key=""
+                        nullable="false"
+                        source="engine"
+                        description="Timestamp of the last bar included in this window"/>
+
+                <column name="window_size_min"
+                        type="SMALLINT"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="config"
+                        config_ref="window_config.xml/window_specs/window_size"
+                        description="W in minutes — read from window_config.xml"/>
+
+                <column name="slide_size_min"
+                        type="SMALLINT"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="config"
+                        config_ref="window_config.xml/window_specs/slide_velocity"
+                        description="S in minutes — read from window_config.xml"/>
+
+                <column name="window_type"
+                        type="VARCHAR(10)"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="config"
+                        config_ref="window_config.xml/window_specs/window_type"
+                        allowed_values="SLIDING,TUMBLING,SESSION"
+                        description="Window type — read from window_config.xml"/>
+
+                <column name="bar_count"
+                        type="SMALLINT"
+                        category="measure"
+                        key=""
+                        nullable="true"
+                        source="engine"
+                        description="Actual bars present — may be less than window_size if gaps exist"/>
+
+                <column name="trade_date"
+                        type="DATE"
+                        category="attribute"
+                        key=""
+                        nullable="true"
+                        source="derived"
+                        description="Trading date this window belongs to"/>
+            </columns>
+
+            <hierarchy name="window_lattice">
+                <level ordinal="1" column="window_id"    label="Window"/>
+                <level ordinal="2" column="trade_date"   label="Day"/>
+                <level ordinal="3" column="ALL"          label="All Windows"/>
+            </hierarchy>
+        </dimension>
+
+    </dimensions>
+
+    <fact_table name="fact_stock_bar"
+                grain="one row per stock per 1-minute bar per sliding window"
+                description="Central fact table — holds all measures for OLAP analysis">
+
+        <!-- Foreign keys linking to dimension tables -->
+        <foreign_keys>
+            <fk column="time_key"   references="dim_time.time_key"     on_delete="RESTRICT"/>
+            <fk column="stock_key"  references="dim_stock.stock_key"   on_delete="RESTRICT"/>
+            <fk column="window_key" references="dim_window.window_key" on_delete="RESTRICT"/>
+        </foreign_keys>
+
+        <!-- ── COLUMNS ─────────────────────────────────── -->
+        <columns>
+
+            <!-- Keys -->
+            <column name="bar_key"
+                    type="BIGINT AUTO_INCREMENT"
+                    category="key"
+                    key="PK"
+                    nullable="false"
+                    source="system"
+                    description="Unique surrogate — always ascending, never repeats"/>
+
+            <column name="time_key"
+                    type="BIGINT"
+                    category="fk"
+                    key="FK"
+                    nullable="false"
+                    source="lookup"
+                    references="dim_time.time_key"
+                    description="Which minute timestamp this bar belongs to"/>
+
+            <column name="stock_key"
+                    type="INT"
+                    category="fk"
+                    key="FK"
+                    nullable="false"
+                    source="lookup"
+                    references="dim_stock.stock_key"
+                    description="Which stock this bar belongs to"/>
+
+            <column name="window_key"
+                    type="INT"
+                    category="fk"
+                    key="FK"
+                    nullable="false"
+                    source="engine"
+                    references="dim_window.window_key"
+                    description="Which sliding window contains this bar — ascending, allows repeats"/>
+
+            <!-- Raw OHLCV measures — copied directly from CSV -->
+            <column name="open_price"
+                    type="DECIMAL(12,4)"
+                    category="measure"
+                    key=""
+                    nullable="true"
+                    source="csv"
+                    csv_column="open"
+                    description="Price of the very first trade in this 1-minute bar"/>
+
+            <column name="high_price"
+                    type="DECIMAL(12,4)"
+                    category="measure"
+                    key=""
+                    nullable="true"
+                    source="csv"
+                    csv_column="high"
+                    description="Highest trade price within the bar"/>
+
+            <column name="low_price"
+                    type="DECIMAL(12,4)"
+                    category="measure"
+                    key=""
+                    nullable="true"
+                    source="csv"
+                    csv_column="low"
+                    description="Lowest trade price within the bar"/>
+
+            <column name="close_price"
+                    type="DECIMAL(12,4)"
+                    category="measure"
+                    key=""
+                    nullable="true"
+                    source="csv"
+                    csv_column="close"
+                    description="Price of the very last trade in this bar"/>
+
+            <column name="volume"
+                    type="BIGINT"
+                    category="measure"
+                    key=""
+                    nullable="true"
+                    source="csv"
+                    csv_column="volume"
+                    description="Total shares traded during the bar"/>
+
+            <!-- Computed measures — derived by ETL pipeline -->
+            <column name="vwap"
+                    type="DECIMAL(12,4)"
+                    category="measure"
+                    key=""
+                    nullable="true"
+                    source="computed"
+                    formula="SUM(price * volume) / SUM(volume)"
+                    description="Volume-weighted average price — true fair value of the bar"/>
+
+            <column name="dollar_volume"
+                    type="DECIMAL(18,2)"
+                    category="measure"
+                    key=""
+                    nullable="true"
+                    source="computed"
+                    formula="close_price * volume"
+                    description="Total dollars traded — measures money flow"/>
+
+            <column name="bar_return"
+                    type="DECIMAL(8,6)"
+                    category="measure"
+                    key=""
+                    nullable="true"
+                    source="computed"
+                    formula="(close_price - prev_close_price) / prev_close_price"
+                    description="Per-bar percentage return — positive = price went up"/>
+
+            <column name="bar_range"
+                    type="DECIMAL(12,4)"
+                    category="measure"
+                    key=""
+                    nullable="true"
+                    source="computed"
+                    formula="high_price - low_price"
+                    description="Intrabar price spread — proxy for minute-level volatility"/>
+
+            <column name="trade_count"
+                    type="INT"
+                    category="measure"
+                    key=""
+                    nullable="true"
+                    source="csv"
+                    csv_column="trade_count"
+                    description="Number of individual trades executed in the bar"/>
+
+            <!-- Technical indicators — rolling calculations -->
+            <column name="sma_20"
+                    type="DECIMAL(12,4)"
+                    category="indicator"
+                    key=""
+                    nullable="true"
+                    source="computed"
+                    formula="rolling_mean(close_price, 20)"
+                    lookback_bars="20"
+                    description="20-bar simple moving average — trend baseline"/>
+
+            <column name="ema_9"
+                    type="DECIMAL(12,4)"
+                    category="indicator"
+                    key=""
+                    nullable="true"
+                    source="computed"
+                    formula="ewm(close_price, span=9, adjust=False)"
+                    lookback_bars="9"
+                    description="9-bar exponential moving average — faster trend signal"/>
+
+            <column name="rsi_14"
+                    type="DECIMAL(6,3)"
+                    category="indicator"
+                    key=""
+                    nullable="true"
+                    source="computed"
+                    formula="rsi(close_price, periods=14)"
+                    lookback_bars="14"
+                    range_min="0"
+                    range_max="100"
+                    overbought_threshold="70"
+                    oversold_threshold="30"
+                    description="14-bar Relative Strength Index — momentum thermometer 0 to 100"/>
+
+            <!-- Window flags — set by window engine -->
+            <column name="is_window_first_bar"
+                    type="TINYINT(1)"
+                    category="flag"
+                    key=""
+                    nullable="true"
+                    source="engine"
+                    default="false"
+                    description="TRUE if this bar is the opening bar of its window"/>
+
+            <column name="is_window_last_bar"
+                    type="TINYINT(1)"
+                    category="flag"
+                    key=""
+                    nullable="true"
+                    source="engine"
+                    default="false"
+                    description="TRUE if this bar is the closing bar of its window"/>
+
+            <!-- Metadata -->
+            <column name="ingestion_ts"
+                    type="TIMESTAMP"
+                    category="meta"
+                    key=""
+                    nullable="true"
+                    source="system"
+                    default="CURRENT_TIMESTAMP"
+                    description="Wall-clock timestamp when this row was inserted — for latency tracking"/>
+
+        </columns>
+
+        <!-- ── INDEXES ──────────────────────────────────── -->
+        <indexes>
+            <index name="idx_fsb_time"         columns="time_key"            type="BTREE"/>
+            <index name="idx_fsb_stock"        columns="stock_key"           type="BTREE"/>
+            <index name="idx_fsb_window"       columns="window_key"          type="BTREE"/>
+            <index name="idx_fsb_stock_window" columns="stock_key,window_key" type="BTREE"/>
+            <index name="idx_fsb_close"        columns="close_price"         type="BTREE"/>
+        </indexes>
+
+    </fact_table>
+
+    <aggregation id="1" >
+        <col>dollar_volume</col>
+        <function> sum </function>
+    </aggregation>
+
+    <aggregation id="2" >
+        <col>dollar_volume</col>
+        <function> count </function>
+    </aggregation>
+
+    <aggregation id="3" >
+        <col>sma_20</col>
+        <function> sum </function>
+    </aggregation>
+
+    <aggregation id="4" >
+        <col>sma_20</col>
+        <function> sum </function>
+    </aggregation>
+    
+
+</warehouse_schema>

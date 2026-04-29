@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<window_configuration>
+
+
+    <window_specs>
+
+        <window_type>SLIDING</window_type>
+
+        <window_size unit="minutes">30</window_size>
+
+        <slide_velocity unit="minutes">5</slide_velocity>
+
+        <overlap_bars>25</overlap_bars>
+
+        <warmup_bars>60</warmup_bars>
+
+        <min_bars_required>20</min_bars_required>
+
+    </window_specs>
+
+    <granularity>
+
+        <bar_size unit="minutes">1</bar_size>
+
+        <bars_per_trading_day>390</bars_per_trading_day>
+
+        <trading_hours timezone="ET">
+            <market_open>09:30:00</market_open>
+            <market_close>16:00:00</market_close>
+        </trading_hours>
+        <sessions>
+            <session name="PRE"   start="04:00:00" end="09:29:00"/>
+            <session name="OPEN"  start="09:30:00" end="15:59:00"/>
+            <session name="CLOSE" start="15:50:00" end="16:00:00"/>
+            <session name="AFTER" start="16:01:00" end="20:00:00"/>
+        </sessions>
+    </granularity>
+
+    <window_math>
+
+        <total_windows_per_day>73</total_windows_per_day>
+        <fact_rows_per_day tickers="8">17520</fact_rows_per_day>
+
+    </window_math>
+
+    <execution>
+
+        <mode>REPLAY</mode>
+        <max_windows>0</max_windows>
+
+        <log_every_n_windows>5</log_every_n_windows>
+    </execution>
+
+</window_configuration>

@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LOC Metrics Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f9fc; }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .field { display: flex; flex-direction: column; min-width: 220px; }
+    label { font-size: 12px; color: #475569; margin-bottom: 6px; }
+    select { padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
+    h2 { margin: 0 0 14px 0; }
+    #status { font-size: 13px; color: #334155; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>LOC Metrics Dashboard</h2>
+    <div class="row">
+      <div class="field">
+        <label>LOC table</label>
+        <select id="tableSelect"></select>
+      </div>
+      <div class="field">
+        <label>X axis</label>
+        <select id="xMode">
+          <option value="time">Time</option>
+          <option value="tick" selected>Tick no</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Auto refresh</label>
+        <select id="autoRefresh">
+          <option value="on" selected>On</option>
+          <option value="off">Off</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Refresh every</label>
+        <select id="pollSeconds">
+          <option value="2">2s</option>
+          <option value="5" selected>5s</option>
+          <option value="10">10s</option>
+          <option value="15">15s</option>
+        </select>
+      </div>
+      <div id="filters" class="row"></div>
+    </div>
+    <div style="margin-top: 10px;" id="status">Loading...</div>
+  </div>
+
+  <div class="card">
+    <canvas id="chart" height="110"></canvas>
+  </div>
+
+  <script>
+    const tableSelect = document.getElementById('tableSelect');
+    const xModeEl = document.getElementById('xMode');
+    const autoRefreshEl = document.getElementById('autoRefresh');
+    const pollSecondsEl = document.getElementById('pollSeconds');
+    const filtersBox = document.getElementById('filters');
+    const statusEl = document.getElementById('status');
+
+    let meta = { tables: [], dimensions: {} };
+    let chart = null;
+    let pollTimer = null;
+
+    function axisBounds(values, paddingRatio = 0.12, minSpan = 1) {
+      const clean = values.filter(v => Number.isFinite(v));
+      if (!clean.length) return { min: 0, max: 1 };
+
+      let min = Math.min(...clean);
+      let max = Math.max(...clean);
+
+      if (min === max) {
+        const bump = Math.max(Math.abs(min) * 0.1, minSpan);
+        min -= bump;
+        max += bump;
+      }
+
+      const span = Math.max(max - min, minSpan);
+      const pad = span * paddingRatio;
+      return { min: min - pad, max: max + pad };
+    }
+
+    function startPolling() {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      if (autoRefreshEl.value !== 'on') return;
+
+      const ms = Number(pollSecondsEl.value || 5) * 1000;
+      pollTimer = setInterval(() => {
+        fetchAndPlot();
+      }, ms);
+    }
+
+    function getCurrentDims() {
+      return meta.dimensions[tableSelect.value] || [];
+    }
+
+    function currentFilterValues() {
+      const dims = getCurrentDims();
+      const out = {};
+      for (const d of dims) {
+        const el = document.getElementById(`filter_${d}`);
+        out[d] = el ? el.value : '';
+      }
+      return out;
+    }
+
+    async function loadMeta() {
+      const res = await fetch('/api/meta');
+      meta = await res.json();
+
+      tableSelect.innerHTML = '';
+      for (const t of meta.tables) {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        tableSelect.appendChild(opt);
+      }
+    }
+
+    function renderFilterInputs() {
+      const dims = getCurrentDims();
+      filtersBox.innerHTML = '';
+
+      for (const d of dims) {
+        const wrap = document.createElement('div');
+        wrap.className = 'field';
+
+        const label = document.createElement('label');
+        label.textContent = d;
+
+        const sel = document.createElement('select');
+        sel.id = `filter_${d}`;
+        sel.innerHTML = '<option value="">All</option>';
+        sel.addEventListener('change', async () => {
+          await refreshFilterOptions();
+          await fetchAndPlot();
+        });
+
+        wrap.appendChild(label);
+        wrap.appendChild(sel);
+        filtersBox.appendChild(wrap);
+      }
+    }
+
+    async function refreshFilterOptions() {
+      const dims = getCurrentDims();
+      const selected = currentFilterValues();
+      const qs = new URLSearchParams({ table: tableSelect.value, ...selected });
+      const res = await fetch(`/api/filter-options?${qs.toString()}`);
+      const data = await res.json();
+
+      for (const d of dims) {
+        const sel = document.getElementById(`filter_${d}`);
+        if (!sel) continue;
+
+        const prev = sel.value;
+        const vals = data.options[d] || [];
+        sel.innerHTML = '<option value="">All</option>';
+
+        for (const v of vals) {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v;
+          sel.appendChild(opt);
+        }
+
+        if (vals.includes(prev)) {
+          sel.value = prev;
+        }
+      }
+    }
+
+    async function fetchAndPlot() {
+      statusEl.textContent = 'Loading series...';
+      const filters = currentFilterValues();
+      const qs = new URLSearchParams({ table: tableSelect.value, ...filters });
+      const res = await fetch(`/api/series?${qs.toString()}`);
+      const data = await res.json();
+      const rows = data.rows || [];
+      const rowsView = rows;
+
+      const xMode = xModeEl.value;
+
+      const volumeAvgRaw = rowsView.map(r => Number(r.volume_avg || 0));
+      const sma20AvgRaw = rowsView.map(r => Number(r.sma_20_avg || 0));
+
+      const xVals = xMode === 'time'
+        ? rowsView.map(r => r.ts)
+        : rowsView.map((_, i) => i + 1);
+
+      const ds1 = xVals.map((x, i) => ({ x, y: volumeAvgRaw[i] }));
+      const ds2 = xVals.map((x, i) => ({ x, y: sma20AvgRaw[i] }));
+
+      const xScale = xMode === 'time'
+        ? {
+            type: 'time',
+            time: {
+              unit: 'minute',
+              displayFormats: { minute: 'HH:mm' },
+              tooltipFormat: 'yyyy-MM-dd HH:mm:ss',
+            },
+            ticks: { autoSkip: true, maxTicksLimit: 6 },
+            title: { display: true, text: 'Time' },
+          }
+        : {
+            type: 'linear',
+            ticks: { autoSkip: true, maxTicksLimit: 8 },
+            title: { display: true, text: 'Tick no' },
+          };
+
+      const yScales = {
+        yVol: {
+          type: 'linear',
+          position: 'left',
+          title: { display: true, text: 'volume_avg' },
+          min: axisBounds(volumeAvgRaw, 0.15, 50000).min,
+          max: axisBounds(volumeAvgRaw, 0.15, 50000).max,
+          ticks: {
+            maxTicksLimit: 6,
+            callback: (value) => Number(value).toLocaleString(),
+          },
+        },
+        ySma: {
+          type: 'linear',
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          title: { display: true, text: 'sma_20_avg' },
+          min: axisBounds(sma20AvgRaw, 0.15, 2).min,
+          max: axisBounds(sma20AvgRaw, 0.15, 2).max,
+          ticks: {
+            maxTicksLimit: 6,
+            callback: (value) => Number(value).toFixed(2),
+          },
+        },
+      };
+
+      if (!chart) {
+        const ctx = document.getElementById('chart');
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            datasets: [
+              { label: 'volume_avg', data: ds1, borderWidth: 2, yAxisID: 'yVol' },
+              { label: 'sma_20_avg', data: ds2, borderWidth: 2, yAxisID: 'ySma' },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+              x: xScale,
+              ...yScales,
+            },
+          },
+        });
+      } else {
+        chart.data.datasets[0].data = ds1;
+        chart.data.datasets[1].data = ds2;
+        chart.options.scales = { x: xScale, ...yScales };
+        chart.update();
+      }
+
+      statusEl.textContent = `Rows plotted: ${rowsView.length}`;
+    }
+
+    tableSelect.addEventListener('change', async () => {
+      renderFilterInputs();
+      await refreshFilterOptions();
+      await fetchAndPlot();
+    });
+
+    xModeEl.addEventListener('change', () => fetchAndPlot());
+    autoRefreshEl.addEventListener('change', () => startPolling());
+    pollSecondsEl.addEventListener('change', () => startPolling());
+
+    (async function init() {
+      await loadMeta();
+      renderFilterInputs();
+      await refreshFilterOptions();
+      await fetchAndPlot();
+      startPolling();
+    })();
+  </script>
+</body>
+</html>
