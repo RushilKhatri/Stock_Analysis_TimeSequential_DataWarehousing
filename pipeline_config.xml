@@ -1,14 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!--
-    ============================================================
-    FILE        : pipeline_config.xml
-    PURPOSE     : Database connection, CSV source, ETL execution
-                  settings, and indicator parameters.
-                  Everything the ETL engine needs to run.
-    DYNAMIC     : YES — change DB host, CSV path,
-                  indicator parameters — no code changes.
-    ============================================================
--->
+
 <pipeline_config>
 
     <!-- ══════════════════════════════════════════════════════

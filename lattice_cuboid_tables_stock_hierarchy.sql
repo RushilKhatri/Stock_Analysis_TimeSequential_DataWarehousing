@@ -1,21 +1,5 @@
 USE stock_dw;
 
-/*
-  New LOC lattice based on 3 stock hierarchy attributes:
-  {company_name, sector, industry}  => 2^3 = 8 cuboids
-
-  Measure columns kept as requested:
-    volume_sum, volume_avg, sma_30_sum, sma_30_avg, ticker_no, tick_timestamp
-
-  NOTE:
-    fact_stock_bar currently has sma_20 (not sma_30).
-    For now, sma_30_* is populated from sma_20 aggregations.
-*/
-
-/* ============================
-    Table creation only (non-destructive)
-    ============================ */
-
 /* ============================
    C0: {}  (Apex)
    ============================ */

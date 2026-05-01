@@ -7,9 +7,9 @@
 
         <window_type>SLIDING</window_type>
 
-        <window_size unit="minutes">30</window_size>
+        <window_size unit="count">30</window_size>
 
-        <slide_velocity unit="minutes">5</slide_velocity>
+        <slide_velocity unit="count">5</slide_velocity>
 
         <overlap_bars>25</overlap_bars>
 

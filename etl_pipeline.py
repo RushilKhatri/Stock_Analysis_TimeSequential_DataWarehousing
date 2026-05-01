@@ -1,25 +1,3 @@
-"""
-etl_pipeline.py
-═══════════════════════════════════════════════════════════════
-Full ETL Pipeline for Stock Board Analysis
-  Step 1  → Reads window_config.xml, schema_config.xml,
-             pipeline_config.xml, lattice_queries.xml
-  Step 2  → Connects to MySQL (auto-creates DB + all tables)
-  Step 3  → Seeds dimension tables (DIM_TIME, DIM_STOCK, DIM_WINDOW)
-  Step 4  → Reads CSV row by row in timestamp order (time sequential)
-  Step 5  → Computes indicators per bar (VWAP, SMA-20, EMA-9, RSI-14)
-  Step 6  → Slides window every S bars, inserts into fact table
-  Step 7  → Fires all lattice cuboid queries on every window
-  Step 8  → Prints live results to console in real time
-
-HOW TO RUN:
-    pip install mysql-connector-python pandas numpy
-    set STOCK_DW_PASSWORD=yourpassword        (Windows)
-    export STOCK_DW_PASSWORD=yourpassword     (Mac/Linux)
-    python etl_pipeline.py
-═══════════════════════════════════════════════════════════════
-"""
-
 import os
 import sys
 import math
@@ -66,12 +44,6 @@ log = logging.getLogger('ETL')
 # ═══════════════════════════════════════════════════════════
 
 class DBConnection:
-    """
-    Manages the MySQL connection.
-    Reads host/port/user/dbname from pipeline_config.xml.
-    Password is read from the environment variable named in
-    pipeline_config.xml → never hardcoded.
-    """
 
     def __init__(self, pc: PipelineConfig):
         self.pc     = pc
@@ -207,12 +179,6 @@ class DBConnection:
 # ═══════════════════════════════════════════════════════════
 
 class SchemaManager:
-    """
-    Reads schema_config.xml (via SchemaConfig) and creates
-    all tables in MySQL. Completely dynamic — adding a column
-    to the XML automatically adds it to the CREATE TABLE.
-    """
-
     # MySQL does not support BIGSERIAL or NUMERIC — map them
     TYPE_MAP = {
         'BIGSERIAL':   'BIGINT AUTO_INCREMENT',
@@ -632,11 +598,6 @@ class LOCMaterializer:
 # ═══════════════════════════════════════════════════════════
 
 class DimensionLoader:
-    """
-    Populates DIM_STOCK from the <seed_data> in schema_config.xml.
-    Populates DIM_TIME for every minute in the CSV date range.
-    DIM_WINDOW rows are inserted on-the-fly as windows close.
-    """
 
     def __init__(self, db: DBConnection, sc: SchemaConfig):
         self.db = db
@@ -918,11 +879,6 @@ class DimensionLoader:
 # ═══════════════════════════════════════════════════════════
 
 class IndicatorEngine:
-    """
-    Maintains rolling state per ticker and computes:
-      SMA-20, EMA-9, RSI-14, VWAP (cumulative intraday)
-    All parameters come from pipeline_config.xml indicators section.
-    """
 
     def __init__(self, indicators: List[Dict]):
         # Read lookback values from XML config

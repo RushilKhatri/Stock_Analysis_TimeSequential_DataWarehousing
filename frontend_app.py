@@ -22,6 +22,13 @@ LOC_DIMENSIONS: Dict[str, List[str]] = {
     'loc_company_sector_industry': ['company_name', 'sector', 'industry'],
 }
 
+LOC_METRICS: Dict[str, Dict[str, str]] = {
+    'volume_sum': {'label': 'Volume Sum', 'expr': 'SUM(f.volume)'},
+    'volume_avg': {'label': 'Volume Avg', 'expr': 'AVG(f.volume)'},
+    'sma_30_sum': {'label': 'SMA 30 Sum', 'expr': 'SUM(f.sma_20)'},
+    'sma_30_avg': {'label': 'SMA 30 Avg', 'expr': 'AVG(f.sma_20)'},
+}
+
 
 def _db_password() -> str:
     env_name = (pc.db_password_env or '').strip()
@@ -53,6 +60,7 @@ def api_meta():
     return jsonify({
         'tables': list(LOC_DIMENSIONS.keys()),
         'dimensions': LOC_DIMENSIONS,
+        'metrics': LOC_METRICS,
     })
 
 
@@ -99,6 +107,8 @@ def api_filter_options():
 def api_series():
     table = request.args.get('table', 'loc_apex')
     dims = LOC_DIMENSIONS.get(table, [])
+    metric = request.args.get('metric', 'volume_avg')
+    metric_info = LOC_METRICS.get(metric, LOC_METRICS['volume_avg'])
 
     filters = {}
     for dim in dims:
@@ -113,13 +123,10 @@ def api_series():
             SELECT
                 dt.trade_date AS trade_date,
                 dt.trade_time AS trade_time,
-                SUM(f.volume) AS volume_sum,
-                AVG(f.volume) AS volume_avg,
-                SUM(f.sma_20) AS sma_20_sum,
-                AVG(f.sma_20) AS sma_20_avg
+                {metric_expr} AS metric_value
             FROM fact_stock_bar f
             JOIN dim_time dt ON dt.time_key = f.time_key
-        """
+        """.format(metric_expr=metric_info['expr'])
         params = []
 
         if dims:
@@ -146,13 +153,10 @@ def api_series():
             ts_iso = f"{r['trade_date']}T{r['trade_time']}"
             data.append({
                 'ts': ts_iso,
-                'volume_sum': float(r['volume_sum'] or 0),
-                'volume_avg': float(r['volume_avg'] or 0),
-                'sma_20_sum': float(r['sma_20_sum'] or 0),
-                'sma_20_avg': float(r['sma_20_avg'] or 0),
+                'metric_value': float(r['metric_value'] or 0),
             })
 
-        return jsonify({'rows': data})
+        return jsonify({'rows': data, 'metric': metric, 'metric_label': metric_info['label']})
     finally:
         cur.close()
         conn.close()

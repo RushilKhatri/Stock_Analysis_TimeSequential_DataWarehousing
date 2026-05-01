@@ -1,0 +1,15 @@
+SET FOREIGN_KEY_CHECKS = 0;
+
+TRUNCATE TABLE fact_stock_bar;
+TRUNCATE TABLE dim_window;
+
+TRUNCATE TABLE loc_company_sector_industry;
+TRUNCATE TABLE loc_sector_industry;
+TRUNCATE TABLE loc_company_industry;
+TRUNCATE TABLE loc_company_sector;
+TRUNCATE TABLE loc_industry;
+TRUNCATE TABLE loc_sector;
+TRUNCATE TABLE loc_company;
+TRUNCATE TABLE loc_apex;
+
+SET FOREIGN_KEY_CHECKS = 1;
